@@ -715,7 +715,6 @@ class MergedColumnParallelLinearWithLoRA(ColumnParallelLinearWithLoRA):
             lora_b[0][:, start_idx:end_idx] if lora_b[0] is not None else None,
             lora_b[1][:, start_idx:end_idx] if lora_b[1] is not None else None,
         ]
-        return lora_b
 
     def slice_bias(
         self, bias: List[Union[torch.Tensor,
@@ -733,8 +732,8 @@ class MergedColumnParallelLinearWithLoRA(ColumnParallelLinearWithLoRA):
     def set_lora(
         self,
         index: int,
-        lora_a: torch.Tensor,
-        lora_b: torch.Tensor,
+        lora_a: List[Union[torch.Tensor, None]],
+        lora_b: List[Union[torch.Tensor, None]],
         embeddings_tensor: Optional[torch.Tensor],
         bias: Optional[torch.Tensor] = None,
     ):
@@ -747,6 +746,8 @@ class MergedColumnParallelLinearWithLoRA(ColumnParallelLinearWithLoRA):
                 bias = self.slice_bias(bias)
 
         if lora_a[0] is not None:
+            if lora_b[0] is None:
+                raise ValueError("Cannot apply LoRA with only lora_b.")
             self.lora_a_stacked[0][
                 index, 0, :lora_a[0].shape[1], :lora_a[0].shape[0]].copy_(
                     lora_a[0].T, non_blocking=True)
@@ -758,6 +759,8 @@ class MergedColumnParallelLinearWithLoRA(ColumnParallelLinearWithLoRA):
                                  0, :bias[0].shape[0]].copy_(bias[0].T,
                                                              non_blocking=True)
         if lora_a[1] is not None:
+            if lora_b[1] is None:
+                raise ValueError("Cannot apply LoRA with only lora_b.")
             self.lora_a_stacked[1][
                 index, 0, :lora_a[1].shape[1], :lora_a[1].shape[0]].copy_(
                     lora_a[1].T, non_blocking=True)
